@@ -13,7 +13,7 @@ import java.util.List;
 @Table(name = "users")
 @Getter
 @Setter
-@ToString
+@ToString(exclude = "activities")
 @NoArgsConstructor
 public class User {
 
