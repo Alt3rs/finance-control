@@ -1,5 +1,7 @@
 package com.example.finance_control.controller.activity;
 
+import com.example.finance_control.domain.activity.Activity;
+import com.example.finance_control.domain.type.Type;
 import com.example.finance_control.dto.ActivityRequestDTO;
 import com.example.finance_control.dto.ActivityResponseDTO;
 import com.example.finance_control.service.ActivityService;
@@ -9,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.io.IOException;
 import java.util.List;
 
@@ -63,5 +64,14 @@ public class ActivityController {
     @GetMapping("/pdf")
     public void exportToPdf(@RequestParam String userId, HttpServletResponse response) throws Exception {
         exportService.writeActivitiesToPdf(userId, response);
+    }
+
+    @GetMapping("/filter")
+    public ResponseEntity<List<ActivityResponseDTO>> getActivitiesByType(
+            @RequestParam String userId,
+            @RequestParam Type type
+    ) {
+        List<ActivityResponseDTO> activities = activityService.getActivitiesByType(userId, type);
+        return ResponseEntity.ok(activities);
     }
 }

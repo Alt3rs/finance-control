@@ -118,4 +118,11 @@ public class ActivityService {
                         : -a.getValue())
                 .sum();
     }
+
+    public List<ActivityResponseDTO> getActivitiesByType(String userId, Type type) {
+        List<Activity> activities = repository.findByUserIdAndType(userId, type);
+        return activities.stream()
+                .map(ActivityResponseDTO::new)
+                .toList();
+    }
 }

@@ -22,6 +22,9 @@ public class ExportService {
     @Autowired
     private ActivityRepository activityRepository;
 
+    @Autowired
+    private ActivityService activityService;
+
     public void writeActivitiesToCsv(String userId, HttpServletResponse response) throws IOException {
         List<Activity> activities = activityRepository.findByUserId(userId);
 
@@ -41,6 +44,9 @@ public class ExportService {
                     FormatDateTime.formatDate(activity.getDate())
             ));
     }
+        double saldoFinal = activityService.calculateBalance(userId);
+        writer.println();
+        writer.println(String.format("Saldo Final;%.2f;", saldoFinal));
 }
 
     public void writeActivitiesToPdf(String userId, HttpServletResponse response) throws IOException, DocumentException {
@@ -65,6 +71,10 @@ public class ExportService {
                     ));
             document.add(new Paragraph(" "));
         }
+
+        double saldoFinal = activityService.calculateBalance(userId);
+        document.add(new Paragraph(" "));
+        document.add(new Paragraph(String.format("Saldo Final: R$ %.2f", saldoFinal)));
 
         document.close();
     }
