@@ -7,6 +7,8 @@ import com.example.finance_control.dto.ActivityResponseDTO;
 import com.example.finance_control.service.ActivityService;
 import com.example.finance_control.service.ExportService;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +27,7 @@ public class ActivityController {
     private ExportService exportService;
 
     @PostMapping
-    public ResponseEntity<ActivityResponseDTO> createActivity(@RequestBody ActivityRequestDTO activityRequestDTO) {
+    public ResponseEntity<ActivityResponseDTO> createActivity(@RequestBody @Valid ActivityRequestDTO activityRequestDTO) {
         ActivityResponseDTO response = activityService.insertActivity(activityRequestDTO);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -33,19 +35,25 @@ public class ActivityController {
     @PutMapping("/{id}")
     public ResponseEntity<ActivityResponseDTO> updateActivity(
             @PathVariable String id,
-            @RequestBody ActivityRequestDTO activityRequestDTO) {
+            @RequestBody @Valid ActivityRequestDTO activityRequestDTO) {
         ActivityResponseDTO response = activityService.updateActivity(id, activityRequestDTO);
         return ResponseEntity.ok().body(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteActivity(@PathVariable String id, @RequestParam String userId) {
+    public ResponseEntity<Void> deleteActivity(@PathVariable String id, @RequestParam @Pattern(
+            regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            message = "ID do usuário deve ser um UUID válido"
+    )  String userId) {
         activityService.removeActivity(id, userId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping
-    public ResponseEntity<List<ActivityResponseDTO>> listActivities(@RequestParam String userId) {
+    public ResponseEntity<List<ActivityResponseDTO>> listActivities(@RequestParam @Pattern(
+            regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            message = "ID do usuário deve ser um UUID válido"
+    ) String userId) {
         List<ActivityResponseDTO> activities = activityService.listActivities(userId);
         return ResponseEntity.ok().body(activities);
     }

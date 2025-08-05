@@ -2,17 +2,23 @@ package com.example.finance_control.infra.exceptions;
 
 import com.example.finance_control.dto.error.ErrorResponse;
 import com.example.finance_control.exceptions.*;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
+import com.fasterxml.jackson.core.JsonParseException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -178,5 +184,58 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request) {
+
+        log.warn("HTTP message not readable on path: {} - {}", request.getRequestURI(), ex.getMessage());
+
+        String message = "Dados de entrada inválidos";
+        Map<String, String> fieldErrors = new HashMap<>();
+
+        // Detectar se é erro de enum inválido
+        if (ex.getCause() instanceof InvalidFormatException invalidFormatEx) {
+            if (invalidFormatEx.getTargetType().isEnum()) {
+                String fieldName = getFieldNameFromPath(invalidFormatEx.getPath());
+                String enumValues = Arrays.toString(invalidFormatEx.getTargetType().getEnumConstants());
+                fieldErrors.put(fieldName, "Valor inválido. Valores aceitos: " + enumValues);
+            } else {
+                // Outros erros de formato (números inválidos, datas inválidas, etc.)
+                String fieldName = getFieldNameFromPath(invalidFormatEx.getPath());
+                fieldErrors.put(fieldName, "Formato inválido para este campo");
+            }
+        }
+        // Detectar erros de sintaxe JSON
+        else if (ex.getCause() instanceof JsonParseException) {
+            fieldErrors.put("request", "Formato JSON inválido");
+        }
+        // Outros erros de deserialização
+        else {
+            fieldErrors.put("request", "Dados de entrada em formato inválido");
+        }
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .code("VALIDATION_ERROR")
+                .message(message)
+                .details("Verifique os campos e tente novamente")
+                .fieldErrors(fieldErrors)
+                .timestamp(LocalDateTime.now())
+                .path(request.getRequestURI())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    //Método auxiliar para extrair nome do campo do path de erro
+    private String getFieldNameFromPath(List<JsonMappingException.Reference> path) {
+        if (path.isEmpty()) {
+            return "unknown";
+        }
+        JsonMappingException.Reference lastRef = path.get(path.size() - 1);
+        return lastRef.getFieldName() != null ? lastRef.getFieldName() : "unknown";
     }
 }
