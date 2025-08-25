@@ -32,14 +32,15 @@ public class ExportService {
         response.setHeader("Content-Disposition", "attachment; filename=activities.csv");
 
         PrintWriter writer = response.getWriter();
-        writer.println("Descrição;Tipo;Quantia;Data e Hora");
+        writer.println("Descrição;Tipo;Categoria;Quantia;Data e Hora");
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").withLocale(Locale.forLanguageTag("pt-BR"));
 
         for (Activity activity : activities) {
-            writer.println(String.format("%s;%s;%.2f;%s",
+            writer.println(String.format("%s;%s;%s;%.2f;%s",
                     activity.getDescription(),
                     activity.getType(),
+                    activity.getCategory(),
                     activity.getValue(),
                     FormatDateTime.formatDate(activity.getDate())
             ));
@@ -66,6 +67,7 @@ public class ExportService {
             document.add(new Paragraph(
                     "Descrição: " + activity.getDescription() + "\n" +
                     "Tipo: " + activity.getType() + "\n" +
+                            "Categoria: " + activity.getCategory()+ "\n" +
                     "Valor: R$ " + String.format("%.2f",activity.getValue()) + "\n" +
                     "Data: " + FormatDateTime.formatDate(activity.getDate()) + "\n"
                     ));

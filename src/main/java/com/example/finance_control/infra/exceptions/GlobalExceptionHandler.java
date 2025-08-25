@@ -167,6 +167,26 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateEmailException(
+            DuplicateEmailException ex,
+            HttpServletRequest request) {
+
+        log.warn("Duplicate email attempt on path: {} - {}",
+                request.getRequestURI(), ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .code("DUPLICATE_EMAIL")
+                .message("Email já está em uso")
+                .details("Este email já está cadastrado. Tente fazer login ou use outro email.")
+                .timestamp(LocalDateTime.now())
+                .path(request.getRequestURI())
+                .status(HttpStatus.CONFLICT.value())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(
             Exception ex,

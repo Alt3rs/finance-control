@@ -1,9 +1,11 @@
 package com.example.finance_control.service;
 import com.example.finance_control.domain.activity.Activity;
+import com.example.finance_control.domain.category.Category;
 import com.example.finance_control.domain.type.Type;
 import com.example.finance_control.domain.user.User;
 import com.example.finance_control.dto.ActivityRequestDTO;
 import com.example.finance_control.dto.ActivityResponseDTO;
+import com.example.finance_control.dto.CategoryReportDTO;
 import com.example.finance_control.dto.mapper.ActivityMapper;
 import com.example.finance_control.exceptions.DatabaseException;
 import com.example.finance_control.exceptions.ResourceNotFoundException;
@@ -14,7 +16,10 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ActivityService {
@@ -27,24 +32,21 @@ public class ActivityService {
 
 
     public ActivityResponseDTO insertActivity(ActivityRequestDTO activityRequestDTO) {
-        // Buscar o User pelo userId contido no DTO
         User user = userRepository.findById(activityRequestDTO.userId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Converter DTO para entidade
         Activity activity = ActivityMapper.toEntity(activityRequestDTO, user);
-        // Salvar a entidade no repositório
+
         Activity savedActivity = repository.save(activity);
-        // Converter a entidade salva para DTO
+
         return ActivityMapper.toResponseDTO(savedActivity);
     }
     
     public void removeActivity(String id, String userId) {
-        // Verificar se o usuário existe
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Buscar a atividade pelo ID e verificar se pertence ao usuário
         Activity activity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Activity not found"));
 
@@ -52,7 +54,6 @@ public class ActivityService {
             throw new ResourceNotFoundException("This activity does not belong to the user.");
         }
 
-        // Remover a atividade se for do usuário
         try {
             repository.deleteById(id);
         } catch (EmptyResultDataAccessException e) {
@@ -63,19 +64,18 @@ public class ActivityService {
     }
 
     public ActivityResponseDTO updateActivity(String id, ActivityRequestDTO activityRequestDTO) {
-        // Verificar se a atividade existe
+
         Activity existingActivity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(id));
 
-        // Buscar o User pelo userId
         User user = userRepository.findById(activityRequestDTO.userId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Atualizar os valores da atividade existente
         existingActivity.setDate(activityRequestDTO.date());
         existingActivity.setDescription(activityRequestDTO.description());
         existingActivity.setValue(activityRequestDTO.value());
         existingActivity.setType(activityRequestDTO.type());
+        existingActivity.setCategory(activityRequestDTO.category());
         existingActivity.setUser(user);
 
         // Salvar a atividade atualizada
@@ -124,5 +124,77 @@ public class ActivityService {
         return activities.stream()
                 .map(ActivityResponseDTO::new)
                 .toList();
+    }
+
+    public List<ActivityResponseDTO> getActivitiesByCategory(String userId, Category category) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<Activity> activities = repository.findByUserIdAndCategory(userId, category);
+        return activities.stream()
+                .map(ActivityMapper::toResponseDTO)
+                .toList();
+    }
+
+    public List<ActivityResponseDTO> getActivitiesByCategoryAndType(String userId, Category category, Type type) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<Activity> activities = repository.findByUserIdAndCategoryAndType(userId, category, type);
+        return activities.stream()
+                .map(ActivityMapper::toResponseDTO)
+                .toList();
+    }
+
+    public List<ActivityResponseDTO> getActivitiesByDateRange(String userId, Instant startDate, Instant endDate) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<Activity> activities = repository.findByUserIdAndDateBetween(userId, startDate, endDate);
+        return activities.stream()
+                .map(ActivityMapper::toResponseDTO)
+                .toList();
+    }
+
+    public List<ActivityResponseDTO> getActivitiesByCategoryAndDateRange(
+            String userId, Category category, Instant startDate, Instant endDate) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<Activity> activities = repository.findByUserIdAndCategoryAndDateBetween(
+                userId, category, startDate, endDate);
+        return activities.stream()
+                .map(ActivityMapper::toResponseDTO)
+                .toList();
+    }
+
+    // Relatório por categorias
+    public List<CategoryReportDTO> getCategoryReport(String userId, Type type) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<Object[]> results = repository.findSumByUserIdAndTypeGroupByCategory(userId, type);
+
+        return results.stream()
+                .map(result -> new CategoryReportDTO(
+                        (Category) result[0],
+                        (Double) result[1]
+                ))
+                .toList();
+    }
+
+    // Balanço por categoria
+    public Map<Category, Double> getBalanceByCategory(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<Activity> activities = repository.findByUserId(userId);
+
+        return activities.stream()
+                .collect(Collectors.groupingBy(
+                        Activity::getCategory,
+                        Collectors.summingDouble(a ->
+                                a.getType() == Type.REVENUE ? a.getValue() : -a.getValue())
+                ));
     }
 }

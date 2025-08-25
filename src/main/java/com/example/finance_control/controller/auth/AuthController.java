@@ -2,6 +2,7 @@ package com.example.finance_control.controller.auth;
 
 import com.example.finance_control.domain.user.User;
 import com.example.finance_control.dto.*;
+import com.example.finance_control.exceptions.DuplicateEmailException;
 import com.example.finance_control.exceptions.InvalidCredentialsException;
 import com.example.finance_control.exceptions.UserNotFoundException;
 import com.example.finance_control.infra.security.TokenService;
@@ -39,20 +40,21 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponseDTO> register(@RequestBody @Valid RegisterRequestDTO body){
+    public ResponseEntity<RegisterResponseDTO> register(@RequestBody @Valid RegisterRequestDTO body) {
         Optional<User> user = this.repository.findByEmail(body.email());
 
-        if(user.isEmpty()) {
-            User newUser = new User();
-            newUser.setPassword(passwordEncoder.encode(body.password()));
-            newUser.setEmail(body.email());
-            this.repository.save(newUser);
-            String token = this.tokenService.generateToken(newUser);
-            return ResponseEntity.ok(new RegisterResponseDTO(token, newUser.getId()));
-
+        if (user.isPresent()) {
+            throw new DuplicateEmailException(body.email());
         }
 
-        return ResponseEntity.badRequest().build();
+        User newUser = new User();
+        newUser.setPassword(passwordEncoder.encode(body.password()));
+        newUser.setEmail(body.email());
+        this.repository.save(newUser);
+
+        String token = this.tokenService.generateToken(newUser);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new RegisterResponseDTO(token, newUser.getId()));
     }
 
     @PostMapping("/validate")

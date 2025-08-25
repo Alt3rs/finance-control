@@ -17,6 +17,7 @@ public class ActivityMapper {
                 activity.getDescription(),
                 activity.getValue(),
                 activity.getType(),
+                activity.getCategory(),
                 activity.getUser() != null ? activity.getUser().getId() : null
         );
     }
@@ -32,6 +33,7 @@ public class ActivityMapper {
                 dto.description(),
                 dto.value(),
                 dto.type(),
+                dto.category(),
                 user // precisa passar o objeto User
         );
     }
@@ -47,6 +49,8 @@ public class ActivityMapper {
                 activity.getDescription(),
                 activity.getValue(),
                 activity.getType(),
+                activity.getCategory(),
+                new ActivityResponseDTO.CategoryInfo(activity.getCategory()),
                 activity.getUser() != null ? activity.getUser().getId() : null
         );
     }

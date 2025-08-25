@@ -1,5 +1,6 @@
 package com.example.finance_control.dto;
 
+import com.example.finance_control.domain.category.Category;
 import com.example.finance_control.domain.type.Type;
 import jakarta.validation.constraints.*;
 
@@ -26,6 +27,9 @@ public record ActivityRequestDTO(
 
         @NotNull(message = "Tipo é obrigatório")
         Type type,
+
+        @NotNull(message = "Categoria é obrigatória")
+        Category category,
 
         @NotBlank(message = "ID do usuário é obrigatório")
         @Pattern(

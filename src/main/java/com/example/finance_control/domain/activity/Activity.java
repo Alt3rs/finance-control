@@ -1,5 +1,6 @@
 package com.example.finance_control.domain.activity;
 
+import com.example.finance_control.domain.category.Category;
 import com.example.finance_control.domain.type.Type;
 import com.example.finance_control.domain.user.User;
 import com.example.finance_control.exceptions.DomainException;
@@ -37,31 +38,35 @@ public class Activity {
     @Enumerated(EnumType.STRING)
     private Type type;
 
-    // Adiciona a relação muitos-para-um com User
+    @Column(name = "category", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Category category;
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
 
-    private Activity(String id, Instant date, String description, Double value, Type type, User user) {
+    private Activity(String id, Instant date, String description, Double value, Type type,Category category, User user) {
         this.id = id;
         this.date = date;
         this.description = description;
         this.value = value;
         this.type = type;
+        this.category = category;
         this.user = user;
 
     }
 
     public static Activity create(String id, Instant date, String description, Double value,
-                                  Type type, User user) {
-        validate(description, value, type);
-        return new Activity(id, date, description, value, type, user);
+                                  Type type,Category category, User user) {
+        validate(description, value, type, category);
+        return new Activity(id, date, description, value, type, category, user);
 
     }
 
     public static Activity with(String id, Instant date, String description,
-                                Double value, Type type, User user) {
+                                Double value, Type type, Category category, User user) {
 
         return new Activity(
                 id,
@@ -69,10 +74,11 @@ public class Activity {
                 description,
                 value,
                 type,
+                category,
                 user);
     }
 
-    private  static void validate(String description, Double value, Type type) {
+    private  static void validate(String description, Double value, Type type, Category category) {
        if (description == null || description.isBlank()) {
             throw new DomainException("Activity's description should not be blank.");
         } else if (description.length() < 3) {
@@ -81,6 +87,13 @@ public class Activity {
             throw new DomainException("Activity's type should be either expense or revenue.");
         } else if (value == null || value < 0.01) {
             throw new DomainException("Activity's value should be greater than zero.");
+        } else if (category == null) {
+           throw new DomainException("Activity's category is required.");
+       }
+        if (type == Type.REVENUE && category.isExpenseCategory()) {
+            throw new DomainException("Revenue activities cannot have expense categories.");
+        } else if (type == Type.EXPENSE && category.isRevenueCategory()) {
+            throw new DomainException("Expense activities cannot have revenue categories.");
         }
     }
 }
